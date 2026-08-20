@@ -48,7 +48,7 @@ services:
       - "traefik.http.middlewares.hmb-security-headers.headers.frameDeny=true"
       - "traefik.http.middlewares.hmb-security-headers.headers.contentTypeNosniff=true"
       - "traefik.http.middlewares.hmb-security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
-      - "traefik.http.middlewares.hmb-security-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+      - "traefik.http.middlewares.hmb-security-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self' https://w.soundcloud.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
       - "traefik.http.middlewares.hmb-security-headers.headers.permissionsPolicy=geolocation=(), microphone=(), camera=(), payment=()"
 
 networks:
