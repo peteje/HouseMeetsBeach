@@ -11,8 +11,9 @@ services:
     build: ./backend
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - /mnt/ssd/housemeetsbeach/data:/app/data
+    # Nutzt die bestehende MariaDB aus dem fhem_docker-Projekt (Container
+    # "fhem-db"), erreichbar ueber das gemeinsame traefik_public-Netzwerk.
+    # Eigene Datenbank/eigener User darin, siehe README.md.
     networks:
       - default
       - traefik_public

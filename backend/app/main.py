@@ -3,18 +3,23 @@ import hmac
 import os
 import random
 import re
-import sqlite3
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
+import pymysql
+import pymysql.cursors
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, field_validator
 
-DB_PATH = os.environ.get("DB_PATH", "/app/data/party.db")
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "fhem-db")
+MYSQL_PORT = int(os.environ.get("MYSQL_PORT", "3306"))
+MYSQL_USER = os.environ.get("MYSQL_USER", "housemeetsbeach")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "change-me")
+MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "housemeetsbeach")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "change-me")
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-too").encode()
 TOKEN_TTL_SECONDS = 12 * 3600
@@ -34,35 +39,52 @@ app.add_middleware(
 
 @contextmanager
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = pymysql.connect(
+        host=MYSQL_HOST,
+        port=MYSQL_PORT,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DATABASE,
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False,
+    )
     try:
         yield conn
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
 
-def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    with get_conn() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS guests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE,
-                phone TEXT NOT NULL UNIQUE,
-                adults INTEGER NOT NULL DEFAULT 1,
-                children INTEGER NOT NULL DEFAULT 0,
-                notes TEXT DEFAULT '',
-                status TEXT NOT NULL DEFAULT 'zugesagt',
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
+def init_db(retries: int = 10, delay: float = 3.0):
+    for attempt in range(retries):
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS guests (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            first_name VARCHAR(100) NOT NULL,
+                            last_name VARCHAR(100) NOT NULL,
+                            email VARCHAR(255) NOT NULL UNIQUE,
+                            phone VARCHAR(32) NOT NULL UNIQUE,
+                            adults INT NOT NULL DEFAULT 1,
+                            children INT NOT NULL DEFAULT 0,
+                            notes TEXT,
+                            status VARCHAR(20) NOT NULL DEFAULT 'zugesagt',
+                            created_at VARCHAR(40) NOT NULL,
+                            updated_at VARCHAR(40) NOT NULL
+                        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+                        """
+                    )
+            return
+        except pymysql.err.OperationalError:
+            if attempt == retries - 1:
+                raise
+            time.sleep(delay)
 
 
 @app.on_event("startup")
@@ -159,27 +181,29 @@ def submit_rsvp(payload: RSVPIn):
     notes = payload.notes.strip()
 
     with get_conn() as conn:
-        existing = conn.execute(
-            "SELECT id FROM guests WHERE email = ? OR phone = ?", (email, phone)
-        ).fetchone()
-        if existing:
-            conn.execute(
-                """UPDATE guests SET first_name=?, last_name=?, email=?, phone=?,
-                   adults=?, children=?, notes=?, status='zugesagt', updated_at=?
-                   WHERE id=?""",
-                (payload.firstName.strip(), payload.lastName.strip(), email, phone,
-                 payload.adults, payload.children, notes, now, existing["id"]),
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM guests WHERE email = %s OR phone = %s", (email, phone)
             )
-            message = "Deine Anmeldung wurde aktualisiert. Bis bald am Strand!"
-        else:
-            conn.execute(
-                """INSERT INTO guests
-                   (first_name, last_name, email, phone, adults, children, notes, status, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'zugesagt', ?, ?)""",
-                (payload.firstName.strip(), payload.lastName.strip(), email, phone,
-                 payload.adults, payload.children, notes, now, now),
-            )
-            message = "Danke fuer deine Anmeldung! Bis bald am Strand!"
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    """UPDATE guests SET first_name=%s, last_name=%s, email=%s, phone=%s,
+                       adults=%s, children=%s, notes=%s, status='zugesagt', updated_at=%s
+                       WHERE id=%s""",
+                    (payload.firstName.strip(), payload.lastName.strip(), email, phone,
+                     payload.adults, payload.children, notes, now, existing["id"]),
+                )
+                message = "Deine Anmeldung wurde aktualisiert. Bis bald am Strand!"
+            else:
+                cur.execute(
+                    """INSERT INTO guests
+                       (first_name, last_name, email, phone, adults, children, notes, status, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, 'zugesagt', %s, %s)""",
+                    (payload.firstName.strip(), payload.lastName.strip(), email, phone,
+                     payload.adults, payload.children, notes, now, now),
+                )
+                message = "Danke fuer deine Anmeldung! Bis bald am Strand!"
 
     return {"status": "ok", "message": message}
 
@@ -218,8 +242,9 @@ def admin_login(payload: LoginIn):
 @app.get("/api/admin/guests", dependencies=[Depends(verify_token)])
 def list_guests():
     with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM guests ORDER BY created_at DESC").fetchall()
-        return [dict(r) for r in rows]
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM guests ORDER BY created_at DESC")
+            return cur.fetchall()
 
 
 class GuestUpdate(BaseModel):
@@ -239,29 +264,33 @@ def update_guest(guest_id: int, payload: GuestUpdate):
         ("children", payload.children),
     ]:
         if val is not None:
-            fields.append(f"{col} = ?")
+            fields.append(f"{col} = %s")
             values.append(val)
     if not fields:
         return {"status": "ok"}
-    fields.append("updated_at = ?")
+    fields.append("updated_at = %s")
     values.append(datetime.now(timezone.utc).isoformat())
     values.append(guest_id)
     with get_conn() as conn:
-        conn.execute(f"UPDATE guests SET {', '.join(fields)} WHERE id = ?", values)
+        with conn.cursor() as cur:
+            cur.execute(f"UPDATE guests SET {', '.join(fields)} WHERE id = %s", values)
     return {"status": "ok"}
 
 
 @app.delete("/api/admin/guests/{guest_id}", dependencies=[Depends(verify_token)])
 def delete_guest(guest_id: int):
     with get_conn() as conn:
-        conn.execute("DELETE FROM guests WHERE id = ?", (guest_id,))
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM guests WHERE id = %s", (guest_id,))
     return {"status": "ok"}
 
 
 @app.get("/api/admin/export.csv", dependencies=[Depends(verify_token)])
 def export_csv():
     with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM guests ORDER BY created_at").fetchall()
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM guests ORDER BY created_at")
+            rows = cur.fetchall()
     lines = ["Vorname;Nachname;E-Mail;Telefon;Erwachsene;Kinder;Status;Notiz"]
     for r in rows:
         notiz = (r["notes"] or "").replace(";", ",")
