@@ -63,6 +63,7 @@
   }
   .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
   .field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+  .field label a{color:var(--bg3);text-decoration:underline;}
   .field input, .field textarea{
     padding:11px 13px;
     border:1px solid var(--border);
@@ -165,6 +166,14 @@
           <label for="children">Kinder</label>
           <input type="number" id="children" min="0" value="0" required>
         </div>
+      </div>
+
+      <div class="field">
+        <label for="foodOrder">
+          Essenswunsch (optional) —
+          <a href="https://go.nordqr.com/chillaz-cafe-cocktailbar/" target="_blank" rel="noopener">Speisekarte ansehen</a>
+        </label>
+        <textarea id="foodOrder" rows="2" placeholder="Falls du vor Ort essen möchtest: was möchtest du bestellen?"></textarea>
       </div>
 
       <div class="field">

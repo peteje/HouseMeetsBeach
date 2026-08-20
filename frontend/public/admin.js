@@ -93,6 +93,7 @@ function render(){
           <option value="abgesagt" ${g.status==='abgesagt'?'selected':''}>Abgesagt</option>
         </select>
       </td>
+      <td><input type="text" class="notes-input" placeholder="Essenswunsch..." value="${escapeHtml(g.food_order)}" data-id="${g.id}" data-action="foodOrder"></td>
       <td><input type="text" class="notes-input" placeholder="Notiz..." value="${escapeHtml(g.notes)}" data-id="${g.id}" data-action="notes"></td>
       <td><button class="btn-danger" data-id="${g.id}" data-action="delete">Entfernen</button></td>
     `;
@@ -129,15 +130,17 @@ document.getElementById('guestTableBody').addEventListener('change', async funct
 
 let notesTimers = {};
 document.getElementById('guestTableBody').addEventListener('input', function(e){
-  if(e.target.dataset.action === 'notes'){
+  const action = e.target.dataset.action;
+  if(action === 'notes' || action === 'foodOrder'){
     const id = e.target.dataset.id;
     const value = e.target.value;
-    clearTimeout(notesTimers[id]);
-    notesTimers[id] = setTimeout(async () => {
+    const timerKey = `${id}-${action}`;
+    clearTimeout(notesTimers[timerKey]);
+    notesTimers[timerKey] = setTimeout(async () => {
       await apiFetch(`/admin/guests/${id}`, {
         method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ notes: value })
+        body: JSON.stringify({ [action]: value })
       });
     }, 600);
   }

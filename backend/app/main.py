@@ -74,11 +74,15 @@ def init_db(retries: int = 10, delay: float = 3.0):
                             adults INT NOT NULL DEFAULT 1,
                             children INT NOT NULL DEFAULT 0,
                             notes TEXT,
+                            food_order TEXT,
                             status VARCHAR(20) NOT NULL DEFAULT 'zugesagt',
                             created_at VARCHAR(40) NOT NULL,
                             updated_at VARCHAR(40) NOT NULL
                         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
                         """
+                    )
+                    cur.execute(
+                        "ALTER TABLE guests ADD COLUMN IF NOT EXISTS food_order TEXT AFTER notes"
                     )
             return
         except pymysql.err.OperationalError:
@@ -142,6 +146,7 @@ class RSVPIn(BaseModel):
     adults: int = 1
     children: int = 0
     notes: str = ""
+    foodOrder: str = ""
     website: str = ""  # Honeypot - muss leer bleiben
     captchaToken: str
     captchaAnswer: int
@@ -179,6 +184,7 @@ def submit_rsvp(payload: RSVPIn):
 
     now = datetime.now(timezone.utc).isoformat()
     notes = payload.notes.strip()
+    food_order = payload.foodOrder.strip()
 
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -189,19 +195,19 @@ def submit_rsvp(payload: RSVPIn):
             if existing:
                 cur.execute(
                     """UPDATE guests SET first_name=%s, last_name=%s, email=%s, phone=%s,
-                       adults=%s, children=%s, notes=%s, status='zugesagt', updated_at=%s
+                       adults=%s, children=%s, notes=%s, food_order=%s, status='zugesagt', updated_at=%s
                        WHERE id=%s""",
                     (payload.firstName.strip(), payload.lastName.strip(), email, phone,
-                     payload.adults, payload.children, notes, now, existing["id"]),
+                     payload.adults, payload.children, notes, food_order, now, existing["id"]),
                 )
                 message = "Deine Anmeldung wurde aktualisiert. Bis bald am Strand!"
             else:
                 cur.execute(
                     """INSERT INTO guests
-                       (first_name, last_name, email, phone, adults, children, notes, status, created_at, updated_at)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, 'zugesagt', %s, %s)""",
+                       (first_name, last_name, email, phone, adults, children, notes, food_order, status, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'zugesagt', %s, %s)""",
                     (payload.firstName.strip(), payload.lastName.strip(), email, phone,
-                     payload.adults, payload.children, notes, now, now),
+                     payload.adults, payload.children, notes, food_order, now, now),
                 )
                 message = "Danke fuer deine Anmeldung! Bis bald am Strand!"
 
@@ -250,6 +256,7 @@ def list_guests():
 class GuestUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+    foodOrder: Optional[str] = None
     adults: Optional[int] = None
     children: Optional[int] = None
 
@@ -260,6 +267,7 @@ def update_guest(guest_id: int, payload: GuestUpdate):
     for col, val in [
         ("status", payload.status),
         ("notes", payload.notes),
+        ("food_order", payload.foodOrder),
         ("adults", payload.adults),
         ("children", payload.children),
     ]:
@@ -291,12 +299,13 @@ def export_csv():
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM guests ORDER BY created_at")
             rows = cur.fetchall()
-    lines = ["Vorname;Nachname;E-Mail;Telefon;Erwachsene;Kinder;Status;Notiz"]
+    lines = ["Vorname;Nachname;E-Mail;Telefon;Erwachsene;Kinder;Status;Essenswunsch;Notiz"]
     for r in rows:
         notiz = (r["notes"] or "").replace(";", ",")
+        essen = (r["food_order"] or "").replace(";", ",")
         lines.append(
             f'{r["first_name"]};{r["last_name"]};{r["email"]};{r["phone"]};'
-            f'{r["adults"]};{r["children"]};{r["status"]};{notiz}'
+            f'{r["adults"]};{r["children"]};{r["status"]};{essen};{notiz}'
         )
     return PlainTextResponse("\n".join(lines), media_type="text/csv")
 

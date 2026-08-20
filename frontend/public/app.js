@@ -30,6 +30,7 @@ form.addEventListener('submit', async function(e){
     adults: parseInt(document.getElementById('adults').value, 10) || 0,
     children: parseInt(document.getElementById('children').value, 10) || 0,
     notes: document.getElementById('notes').value.trim(),
+    foodOrder: document.getElementById('foodOrder').value.trim(),
     website: document.getElementById('website').value,
     captchaToken: captchaToken,
     captchaAnswer: parseInt(document.getElementById('captchaAnswer').value, 10)
