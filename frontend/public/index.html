@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anmeldung · Vento Vinte @ Chillaz Südstrand Fehmarn</title>
+<style>
+  :root{
+    --bg1:#1a1440;
+    --bg2:#5c2a6e;
+    --bg3:#e8622c;
+    --gold:#f2c14e;
+    --card:#ffffff;
+    --card-alt:#faf7f2;
+    --text:#2b2333;
+    --muted:#7a7188;
+    --border:#e7e0f0;
+    --ok:#3aa76d;
+    --err:#d9534f;
+    --shadow: 0 10px 30px rgba(27,10,46,0.18);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(242,193,78,0.25), transparent 45%),
+      linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+    color:var(--text);
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:560px;margin:0 auto;}
+  header{text-align:center;color:#fff;margin-bottom:24px;}
+  header h1{
+    font-size:clamp(26px,6vw,38px);
+    margin:0 0 6px;
+    text-shadow:0 2px 12px rgba(0,0,0,0.35);
+  }
+  header h1 span{color:var(--gold);}
+  header p{margin:4px 0;color:#f1e6ff;font-size:15px;}
+  header a{color:var(--gold);text-decoration:none;font-weight:600;}
+  header a:hover{text-decoration:underline;}
+
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    padding:26px 24px;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+  .field input, .field textarea{
+    padding:11px 13px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:15px;
+    background:var(--card-alt);
+    color:var(--text);
+    font-family:inherit;
+  }
+  .field input:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--bg3);
+    box-shadow:0 0 0 3px rgba(232,98,44,0.15);
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:480px){.row{grid-template-columns:1fr;}}
+
+  /* Honeypot: fuer Menschen unsichtbar, fuer simple Bots vorhanden */
+  .hp{position:absolute;left:-9999px;top:-9999px;opacity:0;height:0;overflow:hidden;}
+
+  button[type="submit"]{
+    width:100%;
+    cursor:pointer;
+    border:none;
+    border-radius:12px;
+    font-weight:700;
+    font-size:15px;
+    padding:13px 20px;
+    background:linear-gradient(135deg,var(--bg3),#c9451c);
+    color:#fff;
+    box-shadow:0 4px 14px rgba(232,98,44,0.4);
+    margin-top:4px;
+  }
+  button[type="submit"]:hover{filter:brightness(1.05);}
+  button[type="submit"]:disabled{opacity:0.6;cursor:not-allowed;}
+
+  .msg{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:14px;
+    display:none;
+  }
+  .msg.error{display:block;background:#fbeaea;color:var(--err);}
+  .msg.success{display:block;background:#e3f6ec;color:var(--ok);}
+
+  .success-state{display:none;text-align:center;padding:20px 4px;}
+  .success-state .emoji{font-size:44px;margin-bottom:10px;}
+  .success-state h2{margin:0 0 8px;font-size:22px;}
+  .success-state p{color:var(--muted);font-size:15px;margin:0;}
+
+  footer{text-align:center;color:#f1e6ff;font-size:12px;margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🌅 Vento Vinte <span>Beach Club</span></h1>
+    <p>Location: <a href="https://www.chillaz-suedstrand.de/" target="_blank" rel="noopener">Chillaz am Südstrand Fehmarn</a></p>
+  </header>
+
+  <div class="card">
+    <form id="rsvpForm" novalidate>
+      <div class="row">
+        <div class="field">
+          <label for="firstName">Vorname</label>
+          <input type="text" id="firstName" required autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label for="lastName">Nachname</label>
+          <input type="text" id="lastName" required autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">E-Mail</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="phone">Telefon</label>
+        <input type="tel" id="phone" required autocomplete="tel" placeholder="+49 151 12345678">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="adults">Erwachsene</label>
+          <input type="number" id="adults" min="1" value="1" required>
+        </div>
+        <div class="field">
+          <label for="children">Kinder</label>
+          <input type="number" id="children" min="0" value="0" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Notiz (optional)</label>
+        <textarea id="notes" rows="2" placeholder="z.B. Allergien, Anreise..."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="captchaAnswer" id="captchaLabel">Sicherheitsfrage</label>
+        <input type="text" id="captchaAnswer" required inputmode="numeric" autocomplete="off">
+      </div>
+
+      <!-- Honeypot-Feld: darf von echten Nutzern nicht ausgefuellt werden -->
+      <div class="hp" aria-hidden="true">
+        <label for="website">Webseite</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <button type="submit" id="submitBtn">Verbindlich anmelden</button>
+      <div class="msg" id="formMsg"></div>
+    </form>
+
+    <div class="success-state" id="successState">
+      <div class="emoji">🎉</div>
+      <h2 id="successTitle">Danke für deine Anmeldung!</h2>
+      <p>Wir freuen uns auf dich am Südstrand!</p>
+    </div>
+  </div>
+
+  <footer>Deine Daten werden ausschließlich zur Organisation dieser Party verwendet.</footer>
+</div>
+
+<script>
+const API_BASE = '/api';
+let captchaToken = '';
+
+async function loadCaptcha(){
+  try{
+    const res = await fetch(`${API_BASE}/captcha`);
+    const data = await res.json();
+    captchaToken = data.token;
+    document.getElementById('captchaLabel').textContent = `Sicherheitsfrage: ${data.question} = ?`;
+  }catch(e){
+    document.getElementById('captchaLabel').textContent = 'Sicherheitsfrage (Laden fehlgeschlagen, bitte Seite neu laden)';
+  }
+}
+loadCaptcha();
+
+const form = document.getElementById('rsvpForm');
+const msgBox = document.getElementById('formMsg');
+const submitBtn = document.getElementById('submitBtn');
+
+form.addEventListener('submit', async function(e){
+  e.preventDefault();
+  msgBox.className = 'msg';
+  msgBox.textContent = '';
+
+  const payload = {
+    firstName: document.getElementById('firstName').value.trim(),
+    lastName: document.getElementById('lastName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    adults: parseInt(document.getElementById('adults').value, 10) || 0,
+    children: parseInt(document.getElementById('children').value, 10) || 0,
+    notes: document.getElementById('notes').value.trim(),
+    website: document.getElementById('website').value,
+    captchaToken: captchaToken,
+    captchaAnswer: parseInt(document.getElementById('captchaAnswer').value, 10)
+  };
+
+  if(!payload.firstName || !payload.lastName || !payload.email || !payload.phone){
+    msgBox.className = 'msg error';
+    msgBox.textContent = 'Bitte alle Pflichtfelder ausfüllen.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Wird gesendet...';
+
+  try{
+    const res = await fetch(`${API_BASE}/rsvp`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if(!res.ok){
+      msgBox.className = 'msg error';
+      msgBox.textContent = data.detail || 'Da ist etwas schiefgelaufen. Bitte versuche es erneut.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Verbindlich anmelden';
+      loadCaptcha();
+      document.getElementById('captchaAnswer').value = '';
+      return;
+    }
+
+    document.getElementById('successTitle').textContent = data.message || 'Danke für deine Anmeldung!';
+    form.style.display = 'none';
+    document.getElementById('successState').style.display = 'block';
+  }catch(err){
+    msgBox.className = 'msg error';
+    msgBox.textContent = 'Verbindung fehlgeschlagen. Bitte versuche es erneut.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Verbindlich anmelden';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+version: "3.9"
+
+# Dieses Projekt enthaelt KEINEN eigenen Traefik-Container. Es nutzt den
+# Traefik, der bereits fuer andere Projekte (z.B. tender-crm) laeuft, ueber
+# ein gemeinsames, extern angelegtes Docker-Netzwerk "traefik_public".
+# Falls auf diesem Server noch nicht vorhanden, einmalig anlegen:
+#   docker network create traefik_public
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - /mnt/ssd/housemeetsbeach/data:/app/data
+    networks:
+      - default
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+      - "traefik.http.routers.hmb-backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.hmb-backend.entrypoints=websecure"
+      - "traefik.http.routers.hmb-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.hmb-backend.priority=10"
+      - "traefik.http.services.hmb-backend.loadbalancer.server.port=8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+      - "traefik.http.routers.hmb-frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.hmb-frontend.entrypoints=websecure"
+      - "traefik.http.routers.hmb-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.hmb-frontend.priority=1"
+      - "traefik.http.routers.hmb-frontend.middlewares=hmb-security-headers"
+      - "traefik.http.services.hmb-frontend.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.hmb-security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.hmb-security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.hmb-security-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.hmb-security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.hmb-security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.hmb-security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.hmb-security-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+      - "traefik.http.middlewares.hmb-security-headers.headers.permissionsPolicy=geolocation=(), microphone=(), camera=(), payment=()"
+
+networks:
+  default:
+  traefik_public:
+    external: true
