@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anmeldung · Vento Vinte @ Chillaz Südstrand Fehmarn</title>
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root{
     --bg1:#1a1440;
@@ -36,6 +38,17 @@
     font-size:clamp(26px,6vw,38px);
     margin:0 0 6px;
     text-shadow:0 2px 12px rgba(0,0,0,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+  }
+  header h1 img{
+    height:1.1em;
+    width:1.1em;
+    border-radius:10px;
+    object-fit:cover;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
   }
   header h1 span{color:var(--gold);}
   header p{margin:4px 0;color:#f1e6ff;font-size:15px;}
@@ -101,14 +114,16 @@
   .success-state h2{margin:0 0 8px;font-size:22px;}
   .success-state p{color:var(--muted);font-size:15px;margin:0;}
 
-  footer{text-align:center;color:#f1e6ff;font-size:12px;margin-top:20px;}
+  footer{text-align:center;color:#f1e6ff;font-size:12px;margin-top:20px;line-height:1.8;}
+  footer a{color:var(--gold);text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
-    <h1>🌅 Vento Vinte <span>Beach Club</span></h1>
+    <h1><img src="/logo-128.png" alt="Vento Vinte Logo"> Vento Vinte <span>Beach Club</span></h1>
     <p>Location: <a href="https://www.chillaz-suedstrand.de/" target="_blank" rel="noopener">Chillaz am Südstrand Fehmarn</a></p>
   </header>
 
@@ -179,7 +194,10 @@
     </div>
   </div>
 
-  <footer>Deine Daten werden ausschließlich zur Organisation dieser Party verwendet.</footer>
+  <footer>
+    Deine Daten werden ausschließlich zur Organisation dieser Party verwendet.<br>
+    <a href="/impressum.html">Impressum</a> · <a href="/datenschutz.html">Datenschutz</a>
+  </footer>
 </div>
 
 <script src="app.js"></script>
